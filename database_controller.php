@@ -2,13 +2,17 @@
 session_start();
 require "database_con.php";
 $email = "";
-$name = "";
+$firstname = "";
+$lastname = "";
+
 $errors = array();
 
 //if user signup button
 if(isset($_POST['signup'])){
     //user's signup details
-    $name = mysqli_real_escape_string($db_con, $_POST['name']);
+    $userid = rand(999, 111);
+    $firstname = mysqli_real_escape_string($db_con, $_POST['fname']);
+    $lastname = mysqli_real_escape_string($db_con, $_POST['lname']);
     $email = mysqli_real_escape_string($db_con, $_POST['email']);
     $password = mysqli_real_escape_string($db_con, $_POST['password']);
     $confirm_pass= mysqli_real_escape_string($db_con, $_POST['cpassword']);
@@ -22,13 +26,16 @@ if(isset($_POST['signup'])){
     if(mysqli_num_rows($email_recheck) > 0){
         $errors['email'] = "Email address you provided is already in use!";
     }
+    
+    
     //sends the otp code and verifies the account
     if(count($errors) === 0){
         $encpass = password_hash($password, PASSWORD_BCRYPT);
         $code = rand(9999999, 1111111);
         $status = "NOTVERIFIED";
-        $insert_data = "INSERT INTO users_reg (name, email, password, code, status)
-                        values('$name', '$email', '$encpass', '$code', '$status')";
+        //adding data to user_reg
+        $insert_data = "INSERT INTO users_reg (userid, fname, lname,  email, password, code, status)
+                        values('$userid','$firstname','$lastname', '$email', '$encpass', '$code', '$status')";
         $data_check = mysqli_query($db_con, $insert_data);
         if($data_check){
             $subject = "HOME AUTOMATION - Email Verification Code ";
@@ -65,9 +72,9 @@ if(isset($_POST['signup'])){
             $update_otp = "UPDATE users_reg SET code = $code, status = '$status' WHERE code = $fetch_code";
             $update_res = mysqli_query($db_con, $update_otp);
             if($update_res){
-                $_SESSION['name'] = $name;
+                $_SESSION['uname'] = $uname;
                 $_SESSION['email'] = $email;
-                header('location: home.php');
+                header('location: message.php');
                 exit();
             }else{
                 $errors['otp-error'] = "Failed while updating code!";
@@ -76,20 +83,31 @@ if(isset($_POST['signup'])){
             $errors['otp-error'] = "You've entered incorrect code!";
         }
     }
+    
+    //message login - after sign up
+    if(isset($_POST['message-login'])){
+            
+                header('location: login-user.php');
+                
+    }
 
     //if user click login button
     if(isset($_POST['login'])){
+       
         $email = mysqli_real_escape_string($db_con, $_POST['email']);
         $password = mysqli_real_escape_string($db_con, $_POST['password']);
         $check_email = "SELECT * FROM users_reg WHERE email = '$email'";
         $email_recheck = mysqli_query($db_con, $check_email);
+       
         if(mysqli_num_rows($email_recheck) > 0){
             $fetch = mysqli_fetch_assoc($email_recheck);
             $fetch_pass = $fetch['password'];
             if(password_verify($password, $fetch_pass)){
                 $_SESSION['email'] = $email;
+                
                 $status = $fetch['status'];
                 if($status == 'verified'){
+                  
                   $_SESSION['email'] = $email;
                   $_SESSION['password'] = $password;
                     header('location: home.php');
@@ -104,10 +122,7 @@ if(isset($_POST['signup'])){
         }else{
             $errors['email'] = "It's look like you're not yet a member! Click on the bottom link to signup.";
         }
-        
-        $insert_data = "INSERT INTO users_log (email)
-                        values('$email')";
-        $data_check = mysqli_query($db_con, $insert_data);
+       
     }
 
     //if user click continue button in forgot password form
@@ -122,7 +137,7 @@ if(isset($_POST['signup'])){
             if($run_query){
                 $subject = "Password Reset Code";
                 $message = "Your password reset code is $code";
-                $sender = "From: shahiprem7890@gmail.com";
+                $sender = "From: nethufernando1435@gmail.com";
                 if(mail($email, $subject, $message, $sender)){
                     $info = "We've sent a passwrod reset otp to your email - $email";
                     $_SESSION['info'] = $info;
